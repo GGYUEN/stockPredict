@@ -73,3 +73,31 @@ plt.xlabel('Date')
 plt.ylabel('Close Price')
 plt.legend()
 plt.show()
+
+"""
+Predict
+"""
+future_days = 30
+
+last_price = training_set_scaled[-1]
+
+future_predictions = []
+
+for _ in range(future_days):
+    last_price = np.reshape(last_price, (1, 1, 1))
+    predicted_price = model.predict(last_price)
+    predicted_price = sc.inverse_transform(predicted_price)
+    future_predictions.append(predicted_price[0, 0])
+    last_price = sc.transform([[predicted_price[0, 0]]])
+
+last_date = stock.index[-1]
+future_dates = pd.date_range(start=last_date, periods=future_days + 1)
+
+plt.figure(figsize=(14, 7))
+plt.plot(stock.index, real_stock_price, color="red", label='Real stock price')
+plt.plot(future_dates[1:], future_predictions, color='blue', label='Predicted Future Prices')  # Exclude the first date
+plt.title(stockName + " Future Stock Price Prediction")
+plt.xlabel('Date')
+plt.ylabel('Close Price')
+plt.legend()
+plt.show()
