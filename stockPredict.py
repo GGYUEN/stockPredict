@@ -1,63 +1,75 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sb
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from xgboost import XGBClassifier
-from sklearn import metrics
-
-import warnings
-warnings.filterwarnings('ignore')
-
 import yfinance as yf
-#stockName=input("Stock Name:")
-stockName="NVDA"
-stock = yf.Ticker(stockName).history(period="1y", interval="1d", start=None, end=None, actions=True, auto_adjust=True, back_adjust=False)
-dates = stock.index
-df = stock
+import pandas as pd
+import keras
+from keras import layers
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import model_from_json
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
 
-#print(df)
+model = keras.Sequential()
+model.add(layers.Dense(10, activation="relu",input_shape=(10,)))
+model.add(layers.Dense(10, activation="relu",input_shape=(10,)))
+model.add(layers.Dense(10, activation="relu",input_shape=(10,)))
+model.add(layers.Dense(10, activation="relu",input_shape=(10,)))
+model.add(layers.Dense(2, activation="softmax"))
 
-"""
-print(df.shape)
-print(df.describe())
-print(df.info())
+stockName = "TSLA"
+stock = yf.Ticker(stockName).history(period='1258d', interval='1d')
+stock.head()
 
-plt.figure(figsize=(15,5))
-plt.plot(df['Close'])
-plt.title(stockName+' Close price.', fontsize=15)
-plt.ylabel('Price in dollars.')
+training_set = stock.iloc[:,3:4].values
+print("The size of the original data is "+ str(training_set.shape))
+
+sc = MinMaxScaler(feature_range = (0,1))
+training_set_scaled = sc.fit_transform(training_set)
+
+X_train = []
+Y_train = []
+
+X_train = training_set_scaled[0:1257]
+Y_train = training_set_scaled[1:1258]
+X_train = np.reshape(X_train, (1257, 1, 1))
+
+print("Size of X_train is " + str(X_train.shape))
+print("Size of Y_train is " + str(Y_train.shape))
+
+X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1],1))
+
+model = Sequential()
+model.add(LSTM(units = 50, return_sequences=True, input_shape = (X_train.shape[1], 1)))
+model.add(Dropout(0.2))
+model.add(LSTM(units = 50, return_sequences=True))
+model.add(Dropout(0.2))
+model.add(LSTM(units = 50, return_sequences=True))
+model.add(Dropout(0.2))
+model.add(LSTM(units = 50))
+model.add(Dropout(0.2))
+model.add(Dense(units=1))
+model.summary()
+
+model.compile(optimizer= 'adam', loss='mean_squared_error')
+
+model.fit(X_train, Y_train, epochs= 100, batch_size=50)
+
+dataset_test = yf.Ticker(stockName).history(period='1258d', interval='1d')
+real_stock_price = dataset_test.iloc[:, 3:4].values
+dataset_test.head(20)
+
+X_test = sc.transform(real_stock_price)
+X_test = np.reshape(X_test, (1258, 1 , 1))
+Y_test = model.predict(X_test)
+Y_test = sc.inverse_transform(Y_test)
+
+plt.figure(figsize=(14, 7))
+plt.plot(dataset_test.index,real_stock_price, color="red", label = 'Real stock price')
+plt.plot(dataset_test.index,Y_test, color='blue', label='Predicted')
+plt.title(stockName+" Stock Price Prediction")
+plt.xlabel('Date')
+plt.ylabel('Close Price')
+plt.legend()
 plt.show()
-"""
-####
-"""
-features = ['Open', 'High', 'Low', 'Close', 'Volume']
-
-plt.subplots(figsize=(20,10))
-
-for i, col in enumerate(features):
-  plt.subplot(2,3,i+1)
-  sb.distplot(df[col])
-plt.show()
-###
-plt.subplots(figsize=(20,10))
-for i, col in enumerate(features):
-  plt.subplot(2,3,i+1)
-  sb.boxplot(df[col])
-plt.show()
-###
-"""
-
-for df.index in df:
-    for date in df.index:
-        date=str(date).split(' ')[0]
-        splitted =date.split('-')
-        print(splitted)
-        df['day'] = splitted[2]
-        df['month'] = splitted[1]
-        df['year'] = splitted[0]
-print(df)
